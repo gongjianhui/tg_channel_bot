@@ -51,7 +51,12 @@ func (f *TwitterFetcher) getUserTimeline(user string, time int64) ([]ReplyMessag
 		if tweet_time < time {
 			break
 		}
-
+		if len(tweet.InReplyToStatusIdStr) > 0 {
+			continue
+		}
+		if tweet.RetweetedStatus != nil {
+			continue
+		}
 		var msgid string
 		msgid = tweet.QuotedStatusIdStr
 		if msgid == "" {
@@ -64,32 +69,15 @@ func (f *TwitterFetcher) getUserTimeline(user string, time int64) ([]ReplyMessag
 			continue
 		}
 
+		var tweetlink string
+		tweetlink += "https://twitter.com/"
+		tweetlink += tweet.User.ScreenName
+		tweetlink += "/status/"
+		tweetlink += tweet.IdStr
+		tweetlink += "/"
+
 		resources := make([]Resource, 0, len(tweet.ExtendedEntities.Media))
-		for _, media := range tweet.ExtendedEntities.Media {
-			var rType int
-			var rURL string
-			switch media.Type {
-			case "photo":
-				rType = TIMAGE
-				rURL = media.Media_url_https
-			case "video":
-				rType = TVIDEO
-				if len(media.VideoInfo.Variants) == 0 {
-					continue
-				}
-				rURL = media.VideoInfo.Variants[0].Url
-			case "animated_gif":
-				rType = TVIDEO
-				if len(media.VideoInfo.Variants) == 0 {
-					continue
-				}
-				rURL = media.VideoInfo.Variants[0].Url
-			}
-			if rURL != "" {
-				resources = append(resources, Resource{rURL, rType, rURL})
-			}
-		}
-		ret = append(ret, ReplyMessage{resources, tweet.FullText, nil})
+		ret = append(ret, ReplyMessage{resources, tweetlink, nil})
 	}
 	return ret, nil
 }
